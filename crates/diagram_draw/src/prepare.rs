@@ -2088,6 +2088,7 @@ fn interconnection_scene_from_typed_projection(
                 "busPortId": through_ports.first().map(|port| id_for(*port)),
                 "name": display_name(index, &through_ports),
                 "typeName": type_name(element),
+                "multiplicity": field(element, "multiplicity"),
                 // The arrow in a port's square shows the direction written on the port, or
                 // else the one its directed features give it (SysML 8.2.3.12).
                 "direction": field(element, "direction")
@@ -3503,6 +3504,28 @@ fn composite_unless_ref(metaclass: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn interconnection_preparation_preserves_authored_port_multiplicity() {
+        let payload = json!({
+            "schemaVersion": diagram_product::SCHEMA_VERSION,
+            "selectedView": {"kind": "interconnection-view", "name": "Wiring"},
+            "projection": {
+                "kind": "interconnection-view",
+                "nodes": [
+                    {"metaclass": "PartDefinition", "name": "Assembly"},
+                    {"metaclass": "PortUsage", "name": "channels", "owner": 0, "multiplicity": "[4]"},
+                    {"metaclass": "PortUsage", "name": "control", "owner": 0, "multiplicity": null}
+                ],
+                "edges": [],
+                "metadata": {"parts": [0], "ports": [1, 2]}
+            }
+        });
+        let prepared = prepare_view_data(&payload).expect("interconnection view prepares");
+        let ports = &prepared["nodes"][0]["attributes"]["portDetails"];
+        assert_eq!(ports[0]["multiplicity"], "[4]");
+        assert_eq!(ports[1]["multiplicity"], "[1]");
+    }
 
     #[test]
     fn general_view_uses_names_and_effective_directions_from_the_product() {
